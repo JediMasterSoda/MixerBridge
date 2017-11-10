@@ -1,0 +1,28 @@
+
+#
+# High Quality Configuration File
+#      --- Mixer Bridge ---
+#
+
+
+# Players with the mixer.use (or mixer.*) permission
+# are able to access the /mixer commands.
+
+prefix: "&9[&3&lMIXER&9]"
+help-message:
+  - "&f/mixer start &b<version_id> &b<share_code>"
+  - "&f/mixer stop"
+  - "&f/mixer scene &b<scene_name>"
+
+no-permission-message: "<prefix> &cYou do not have permission to execute this command."
+invalid-arguments-message: "<prefix> &cInvalid arguments, type /mixer for help."
+not-connected-message: "<prefix> &cYou are not currently in Interactive Mode."
+already-connected-message: "<prefix> &cYou are already in Interactive Mode."
+backend-error-message: "<prefix> &cA server-side error occurred, sorry about that =/"
+invalid-info-message: "<prefix> &cInvalid version id or share code."
+invalid-scene-message: "<prefix> &cInvalid scene."
+
+link-message: "<prefix> &bPlease enter the code &9&l<code>&b at &3https://mixer.com/go&b and try /mixer start afterwards."
+start-message: "<prefix> &aInteractive Mode has been started."
+stop-message: "<prefix> &cInteractive Mode has ended."
+scene-switch-message: "<prefix> &aScene has been switched."

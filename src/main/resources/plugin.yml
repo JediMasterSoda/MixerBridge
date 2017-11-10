@@ -1,0 +1,17 @@
+main: me.redraskal.mixerbridge.MixerBridge
+name: ${project.name}
+author: redraskal
+version: ${project.version}
+description: "Connecting Mixer Interactive with Minecraft."
+
+commands:
+  mixer:
+    description: "Manage your current Mixer connection."
+
+permissions:
+  mixer.*:
+    children:
+      mixer.use: true
+    default: op
+  mixer.use:
+    default: op
