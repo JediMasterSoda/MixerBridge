@@ -1,2 +1,2 @@
-# -MixerBridge
-Connecting Mixer Interactive with Minecraft.
+# MixerBridge
+🔐 Connecting Mixer Interactive with Minecraft.
