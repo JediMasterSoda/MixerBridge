@@ -112,9 +112,9 @@ public class GameClientListener {
                 }.runTaskLater(this.getMixerManager().getMixerBridge(), 1L);
             }
             if(event.getTransaction() != null)
-                event.getTransaction().capture(this.getGameClient()).get();
+                event.getTransaction().capture(this.getGameClient()).complete(true);
         } catch (Exception e) {
-            e.printStackTrace();
+            Bukkit.getLogger().warning("[Mixer] Spark transaction issue: " + e.getMessage());
         }
     }
 }
