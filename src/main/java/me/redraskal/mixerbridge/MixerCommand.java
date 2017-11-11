@@ -2,6 +2,7 @@ package me.redraskal.mixerbridge;
 
 import com.mixer.interactive.GameClient;
 import lombok.Getter;
+import me.redraskal.mixerbridge.listener.GameClientListener;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -28,6 +29,11 @@ public class MixerCommand implements CommandExecutor {
             return false;
         }
         Player player = (Player) sender;
+        if(!player.hasPermission("mixer.use")) {
+            player.sendMessage(this.getMixerBridge().buildMessage(
+                    this.getMixerBridge().getConfig().getString("no-permission-message")));
+            return false;
+        }
         if(args.length > 0) {
             if(args[0].equalsIgnoreCase("start")) {
                 if(args.length > 2) {
@@ -90,7 +96,32 @@ public class MixerCommand implements CommandExecutor {
                 return false;
             }
             if(args[0].equalsIgnoreCase("scene")) {
-                //TODO
+                if(args.length > 1) {
+                    if(this.getMixerBridge().getMixerManager().getGameClient(player.getUniqueId()) != null) {
+                        try {
+                            GameClientListener gameClientListener = this.getMixerBridge()
+                                    .getMixerManager().getGameClientListener(player.getUniqueId());
+                            if(gameClientListener.setCurrentScene(args[1])) {
+                                player.sendMessage(this.getMixerBridge().buildMessage(
+                                        this.getMixerBridge().getConfig().getString("scene-switch-message")
+                                                .replace("<scene>", args[1])));
+                            } else {
+                                player.sendMessage(this.getMixerBridge().buildMessage(
+                                        this.getMixerBridge().getConfig().getString("invalid-scene-message")));
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            player.sendMessage(this.getMixerBridge().buildMessage(
+                                    this.getMixerBridge().getConfig().getString("backend-error-message")));
+                        }
+                    } else {
+                        player.sendMessage(this.getMixerBridge().buildMessage(
+                                this.getMixerBridge().getConfig().getString("not-connected-message")));
+                    }
+                } else {
+                    player.sendMessage(this.getMixerBridge().buildMessage(
+                            this.getMixerBridge().getConfig().getString("invalid-arguments-message")));
+                }
                 return false;
             }
             player.sendMessage(this.getMixerBridge().buildMessage(

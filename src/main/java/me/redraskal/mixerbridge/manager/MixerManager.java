@@ -50,6 +50,11 @@ public class MixerManager {
         return gameClientMap.get(uuid);
     }
 
+    public GameClientListener getGameClientListener(UUID uuid) {
+        if(!gameClientListenerMap.containsKey(uuid)) return null;
+        return gameClientListenerMap.get(uuid);
+    }
+
     public GameClient createGameClient(UUID uuid, String access_token,
                                        int versionID, String shareCode)
             throws ExecutionException, InterruptedException {
