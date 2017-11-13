@@ -3,9 +3,12 @@ package me.redraskal.mixerbridge.listener;
 import com.google.common.eventbus.Subscribe;
 import com.mixer.interactive.GameClient;
 import com.mixer.interactive.event.control.input.ControlMouseDownInputEvent;
+import com.mixer.interactive.event.participant.ParticipantJoinEvent;
+import com.mixer.interactive.event.participant.ParticipantLeaveEvent;
 import com.mixer.interactive.resources.control.ButtonControl;
 import com.mixer.interactive.resources.control.InteractiveControl;
 import com.mixer.interactive.resources.group.InteractiveGroup;
+import com.mixer.interactive.resources.participant.InteractiveParticipant;
 import com.mixer.interactive.resources.scene.InteractiveScene;
 import lombok.Getter;
 import me.redraskal.mixerbridge.manager.MixerManager;
@@ -32,6 +35,9 @@ public class GameClientListener {
 
     @Getter private Map<String, InteractiveControl> controls = new HashMap<>();
     @Getter private Map<String, InteractiveScene> scenes = new HashMap<>();
+    @Getter private Map<String, String> participants = new HashMap<>();
+
+    @Getter private long timeOffset = 0L;
 
     public GameClientListener(MixerManager mixerManager, UUID uuid, GameClient gameClient) {
         this.mixerManager = mixerManager;
@@ -39,7 +45,21 @@ public class GameClientListener {
         this.gameClient = gameClient;
         this.fetchScenes();
         this.updateSceneControls();
+        this.updateTimeOffset();
         this.getGameClient().ready(true);
+    }
+
+    public void updateTimeOffset() {
+        try {
+            long requestStart = System.currentTimeMillis();
+            long mixerTime = this.getGameClient().getTime().get();
+            long requestLatency = (System.currentTimeMillis()-requestStart);
+            this.timeOffset = (mixerTime-System.currentTimeMillis())+requestLatency;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 
     public void updateSceneControls() {
@@ -93,14 +113,30 @@ public class GameClientListener {
     }
 
     @Subscribe
+    public void onParticipantJoin(ParticipantJoinEvent event) {
+        for(InteractiveParticipant interactiveParticipant : event.getParticipants()) {
+            participants.put(interactiveParticipant.getSessionID(), interactiveParticipant.getUsername());
+        }
+    }
+
+    @Subscribe
+    public void onParticipantLeave(ParticipantLeaveEvent event) {
+        for(InteractiveParticipant interactiveParticipant : event.getParticipants()) {
+            if(participants.containsKey(interactiveParticipant.getSessionID()))
+                participants.remove(interactiveParticipant.getSessionID());
+        }
+    }
+
+    @Subscribe
     public void onMouseDown(ControlMouseDownInputEvent event) {
         if(!controls.containsKey(event.getControlInput().getControlID())
                 || !(controls.get(event.getControlInput().getControlID()) instanceof ButtonControl)) return;
         try {
             ButtonControl buttonControl = (ButtonControl) controls.get(event.getControlInput().getControlID());
             if(buttonControl.getMeta().has("cooldown")) {
-                buttonControl.setCooldown(System.currentTimeMillis()+(buttonControl.getMeta().get("cooldown")
-                        .getAsJsonObject().get("value").getAsInt()*1000));
+                long mixerTime = System.currentTimeMillis()+this.getTimeOffset();
+                buttonControl.setCooldown(mixerTime+(buttonControl.getMeta().get("cooldown")
+                        .getAsJsonObject().get("value").getAsNumber().doubleValue()*1000));
             }
             buttonControl.update(this.getGameClient());
             if(buttonControl.getMeta().has("command")) {
@@ -110,6 +146,17 @@ public class GameClientListener {
                                 buttonControl.getMeta().get("command").getAsJsonObject().get("value").getAsString());
                     }
                 }.runTaskLater(this.getMixerManager().getMixerBridge(), 1L);
+            }
+            if(participants.containsKey(event.getParticipantID())) {
+                final String spyMessage = this.getMixerManager().getMixerBridge().buildMessage(
+                        this.getMixerManager().getMixerBridge().getConfig().getString("spy-message"))
+                        .replace("<username>", participants.get(event.getParticipantID()))
+                        .replace("<button>", event.getControlInput().getControlID());
+                Bukkit.getOnlinePlayers().forEach(player -> {
+                    if(player.hasPermission("mixer.spy")) {
+                        player.sendMessage(spyMessage);
+                    }
+                });
             }
             if(event.getTransaction() != null)
                 event.getTransaction().capture(this.getGameClient()).complete(true);

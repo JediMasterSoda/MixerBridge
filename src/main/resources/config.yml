@@ -8,6 +8,9 @@
 # Players with the mixer.use (or mixer.*) permission
 # are able to access the /mixer commands.
 
+# Players with the mixer.spy (or mixer.*) permission
+# are able to see who presses what button.
+
 prefix: "&9[&3&lMIXER&9]"
 help-message:
   - "&f/mixer start &b<version_id> &b<share_code>"
@@ -26,3 +29,4 @@ link-message: "<prefix> &bPlease enter the code &9&l<code>&b at &3https://mixer.
 start-message: "<prefix> &aInteractive Mode has been started."
 stop-message: "<prefix> &cInteractive Mode has ended."
 scene-switch-message: "<prefix> &aScene has been switched to &3<scene>&b."
+spy-message: "<prefix> &9&l<username> &bhas pressed &3<button>&b."

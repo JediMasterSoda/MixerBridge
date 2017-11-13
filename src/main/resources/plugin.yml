@@ -12,6 +12,9 @@ permissions:
   mixer.*:
     children:
       mixer.use: true
+      mixer.spy: true
     default: op
   mixer.use:
+    default: op
+  mixer.spy:
     default: op
