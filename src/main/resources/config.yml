@@ -11,6 +11,22 @@
 # Players with the mixer.spy (or mixer.*) permission
 # are able to see who presses what button.
 
+#
+# Mixer Meta Properties:
+#
+#   cooldown - Cooldown in second(s)
+#   command - Command to run
+#   clicks_needed - Amount of clicks
+#                   needed to activate
+#                   the command
+#
+# [!] NOTE:
+#   * Meta properties are not required for the scene to function
+#   * <username> variable can be used in the command property
+#   * In the event of multiple users clicking the command,
+#     <username> will be a comma separated list without spaces.
+#
+
 prefix: "&9[&3&lMIXER&9]"
 help-message:
   - "&f/mixer start &b<version_id> &b<share_code>"

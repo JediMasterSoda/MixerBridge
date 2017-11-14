@@ -11,6 +11,7 @@ import com.mixer.interactive.resources.group.InteractiveGroup;
 import com.mixer.interactive.resources.participant.InteractiveParticipant;
 import com.mixer.interactive.resources.scene.InteractiveScene;
 import lombok.Getter;
+import me.redraskal.mixerbridge.TeamworkButton;
 import me.redraskal.mixerbridge.manager.MixerManager;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -34,6 +35,7 @@ public class GameClientListener {
     @Getter private String currentScene = "";
 
     @Getter private Map<String, InteractiveControl> controls = new HashMap<>();
+    @Getter private Map<String, TeamworkButton> teamworkControls = new HashMap<>();
     @Getter private Map<String, InteractiveScene> scenes = new HashMap<>();
     @Getter private Map<String, String> participants = new HashMap<>();
 
@@ -64,11 +66,20 @@ public class GameClientListener {
 
     public void updateSceneControls() {
         controls.clear();
+        teamworkControls.clear();
         try {
             for(InteractiveControl interactiveControl : this.getGameClient().getServiceManager()
                     .get(GameClient.CONTROL_SERVICE_PROVIDER).getControls().get()) {
                 if(!interactiveControl.getSceneID().equalsIgnoreCase(this.getCurrentScene())) continue;
                 controls.put(interactiveControl.getControlID(), interactiveControl);
+                if(interactiveControl instanceof ButtonControl) {
+                    ButtonControl buttonControl = (ButtonControl) interactiveControl;
+                    if(buttonControl.getMeta().has("clicks_needed")) {
+                        teamworkControls.put(buttonControl.getControlID(),
+                                new TeamworkButton(buttonControl.getMeta()
+                                        .get("clicks_needed").getAsJsonObject().get("value").getAsInt()));
+                    }
+                }
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -133,24 +144,47 @@ public class GameClientListener {
                 || !(controls.get(event.getControlInput().getControlID()) instanceof ButtonControl)) return;
         try {
             ButtonControl buttonControl = (ButtonControl) controls.get(event.getControlInput().getControlID());
-            if(buttonControl.getMeta().has("cooldown")) {
+            String clickers = "unknown";
+            boolean applyCooldown = true;
+
+            if(participants.containsKey(event.getParticipantID())) clickers = participants.get(event.getParticipantID());
+
+            if(teamworkControls.containsKey(event.getControlInput().getControlID())) {
+                TeamworkButton teamworkButton = teamworkControls.get(event.getControlInput().getControlID());
+                if(participants.containsKey(event.getParticipantID())) {
+                    if(teamworkButton.addClick(participants.get(event.getParticipantID()))) {
+                        clickers = teamworkButton.reset();
+                        applyCooldown = true;
+                        buttonControl.setProgress(0f);
+                    } else {
+                        buttonControl.setProgress(teamworkButton.getPercentageFilled());
+                        applyCooldown = false;
+                    }
+                }
+            }
+
+            if(buttonControl.getMeta().has("cooldown") && applyCooldown) {
                 long mixerTime = System.currentTimeMillis()+this.getTimeOffset();
                 buttonControl.setCooldown(mixerTime+(buttonControl.getMeta().get("cooldown")
                         .getAsJsonObject().get("value").getAsNumber().doubleValue()*1000));
             }
             buttonControl.update(this.getGameClient());
-            if(buttonControl.getMeta().has("command")) {
+
+            final String f_clickers = clickers;
+            if(buttonControl.getMeta().has("command") && applyCooldown) {
                 new BukkitRunnable() {
                     public void run() {
                         Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(),
-                                buttonControl.getMeta().get("command").getAsJsonObject().get("value").getAsString());
+                                buttonControl.getMeta().get("command").getAsJsonObject().get("value").getAsString()
+                                        .replace("<username>", f_clickers));
                     }
                 }.runTaskLater(this.getMixerManager().getMixerBridge(), 1L);
             }
-            if(participants.containsKey(event.getParticipantID())) {
+
+            if(applyCooldown) {
                 final String spyMessage = this.getMixerManager().getMixerBridge().buildMessage(
                         this.getMixerManager().getMixerBridge().getConfig().getString("spy-message"))
-                        .replace("<username>", participants.get(event.getParticipantID()))
+                        .replace("<username>", f_clickers)
                         .replace("<button>", event.getControlInput().getControlID());
                 Bukkit.getOnlinePlayers().forEach(player -> {
                     if(player.hasPermission("mixer.spy")) {
@@ -158,6 +192,7 @@ public class GameClientListener {
                     }
                 });
             }
+
             if(event.getTransaction() != null)
                 event.getTransaction().capture(this.getGameClient()).complete(true);
         } catch (Exception e) {
